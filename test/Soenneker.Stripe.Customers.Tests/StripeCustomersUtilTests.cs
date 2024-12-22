@@ -2,7 +2,6 @@ using Soenneker.Stripe.Customers.Abstract;
 using Soenneker.Tests.FixturedUnit;
 using Xunit;
 
-
 namespace Soenneker.Stripe.Customers.Tests;
 
 [Collection("Collection")]
@@ -12,6 +11,12 @@ public class StripeCustomersUtilTests : FixturedUnitTest
 
     public StripeCustomersUtilTests(Fixture fixture, ITestOutputHelper output) : base(fixture, output)
     {
-        _util = Resolve<IStripeCustomersUtil>();
+        _util = Resolve<IStripeCustomersUtil>(true);
+    }
+
+    [Fact]
+    public void Default()
+    {
+
     }
 }
