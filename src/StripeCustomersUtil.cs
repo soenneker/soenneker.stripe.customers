@@ -29,8 +29,7 @@ public class StripeCustomersUtil : IStripeCustomersUtil
         {
             StripeClient client = await stripeUtil.Get(cancellationToken).NoSync();
 
-            var service = new CustomerService(client);
-            return service;
+            return new CustomerService(client);
         });
     }
 
@@ -96,9 +95,7 @@ public class StripeCustomersUtil : IStripeCustomersUtil
         if (stripeResponse.Data.IsNullOrEmpty())
             return null;
 
-        Customer? result = stripeResponse.Data.FirstOrDefault();
-
-        return result;
+        return stripeResponse.Data.FirstOrDefault();
     }
 
     public async ValueTask DeleteAll(CancellationToken cancellationToken = default)

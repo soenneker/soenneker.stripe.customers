@@ -13,18 +13,22 @@ public static class StripeCustomersUtilRegistrar
     /// <summary>
     /// Adds <see cref="IStripeCustomersUtil"/> as a singleton service. <para/>
     /// </summary>
-    public static void AddStripeCustomersUtilAsSingleton(this IServiceCollection services)
+    public static IServiceCollection AddStripeCustomersUtilAsSingleton(this IServiceCollection services)
     {
         services.AddStripeClientUtilAsSingleton();
         services.TryAddSingleton<IStripeCustomersUtil, StripeCustomersUtil>();
+
+        return services;
     }
 
     /// <summary>
     /// Adds <see cref="IStripeCustomersUtil"/> as a scoped service. <para/>
     /// </summary>
-    public static void AddStripeCustomersUtilAsScoped(this IServiceCollection services)
+    public static IServiceCollection AddStripeCustomersUtilAsScoped(this IServiceCollection services)
     {
         services.AddStripeClientUtilAsSingleton();
         services.TryAddScoped<IStripeCustomersUtil, StripeCustomersUtil>();
+
+        return services;
     }
 }
