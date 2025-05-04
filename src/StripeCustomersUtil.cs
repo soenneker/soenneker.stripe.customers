@@ -115,13 +115,13 @@ public class StripeCustomersUtil : IStripeCustomersUtil
         _logger.LogWarning(")) StripeCustomersUtil: Finished deleting all customers");
     }
 
-    public async ValueTask Delete(string stripeCustomerId, string email, CancellationToken cancellationToken = default)
+    public async ValueTask Delete(string id, string email, CancellationToken cancellationToken = default)
     {
         _logger.LogWarning(")) StripeCustomersUtil: Deleting customer ({email}) ...", email);
 
         CustomerService service = await _service.Get(cancellationToken).NoSync();
 
-        await service.DeleteAsync(stripeCustomerId, cancellationToken: cancellationToken).NoSync();
+        await service.DeleteAsync(id, cancellationToken: cancellationToken).NoSync();
     }
 
     public async ValueTask DeleteByUserId(string userId, CancellationToken cancellationToken = default)
@@ -129,6 +129,44 @@ public class StripeCustomersUtil : IStripeCustomersUtil
         Customer? customer = await GetByUserId(userId, cancellationToken).NoSync();
 
         await Delete(customer.Id, customer.Email, cancellationToken).NoSync();
+    }
+
+    public async ValueTask<string?> GetDefaultPaymentMethodId(string id, CancellationToken cancellationToken = default)
+    {
+        CustomerService service = await _service.Get(cancellationToken).NoSync();
+        Customer customer = await service.GetAsync(id, cancellationToken: cancellationToken).NoSync();
+
+        return customer?.InvoiceSettings?.DefaultPaymentMethodId;
+    }
+
+    public async ValueTask UpdateDefaultPaymentMethod(string id, string paymentMethodId, CancellationToken cancellationToken = default)
+    {
+        CustomerService service = await _service.Get(cancellationToken).NoSync();
+
+        var updateOptions = new CustomerUpdateOptions
+        {
+            InvoiceSettings = new CustomerInvoiceSettingsOptions
+            {
+                DefaultPaymentMethod = paymentMethodId
+            }
+        };
+
+        await service.UpdateAsync(id, updateOptions, cancellationToken: cancellationToken).NoSync();
+    }
+
+    public async ValueTask DeleteDefaultPaymentMethod(string id, CancellationToken cancellationToken = default)
+    {
+        CustomerService service = await _service.Get(cancellationToken).NoSync();
+
+        var updateOptions = new CustomerUpdateOptions
+        {
+            InvoiceSettings = new CustomerInvoiceSettingsOptions
+            {
+                DefaultPaymentMethod = null
+            }
+        };
+
+        await service.UpdateAsync(id, updateOptions, cancellationToken: cancellationToken).NoSync();
     }
 
     public void Dispose()
