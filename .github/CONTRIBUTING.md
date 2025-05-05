@@ -1,4 +1,4 @@
-# Contributing to Soenneker.Stripe.Customers
+﻿# Contributing to Soenneker.Stripe.Customers
 
 We're excited that you're interested in contributing!
 
