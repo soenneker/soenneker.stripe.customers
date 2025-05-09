@@ -90,7 +90,8 @@ public class StripeCustomersUtil : IStripeCustomersUtil
             Query = $"metadata[\"userId\"]:\"{userId}\""
         };
 
-        StripeSearchResult<Customer>? stripeResponse = await (await _service.Get(cancellationToken).NoSync()).SearchAsync(options, cancellationToken: cancellationToken).NoSync();
+        StripeSearchResult<Customer>? stripeResponse =
+            await (await _service.Get(cancellationToken).NoSync()).SearchAsync(options, cancellationToken: cancellationToken).NoSync();
 
         if (stripeResponse.Data.IsNullOrEmpty())
             return null;
@@ -129,6 +130,85 @@ public class StripeCustomersUtil : IStripeCustomersUtil
         Customer? customer = await GetByUserId(userId, cancellationToken).NoSync();
 
         await Delete(customer.Id, customer.Email, cancellationToken).NoSync();
+    }
+
+    public async ValueTask<Customer?> Update(Customer customer, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(")) StripeCustomersUtil: Updating customer {id} ...", customer.Id);
+
+        var options = new CustomerUpdateOptions
+        {
+            Email = customer.Email,
+            Name = customer.Name,
+            Description = customer.Description,
+            Metadata = customer.Metadata,
+            Phone = customer.Phone,
+            InvoicePrefix = customer.InvoicePrefix,
+            PreferredLocales = customer.PreferredLocales?.ToList(),
+            TaxExempt = customer.TaxExempt,
+            Tax = customer.Tax is null
+                ? null
+                : new CustomerTaxOptions
+                {
+                    IpAddress = customer.Tax.IpAddress
+                },
+            Address = customer.Address is null
+                ? null
+                : new AddressOptions
+                {
+                    City = customer.Address.City,
+                    Country = customer.Address.Country,
+                    Line1 = customer.Address.Line1,
+                    Line2 = customer.Address.Line2,
+                    PostalCode = customer.Address.PostalCode,
+                    State = customer.Address.State
+                },
+            Shipping = customer.Shipping is null
+                ? null
+                : new ShippingOptions
+                {
+                    Name = customer.Shipping.Name,
+                    Phone = customer.Shipping.Phone,
+                    Address = customer.Shipping.Address is null
+                        ? null
+                        : new AddressOptions
+                        {
+                            City = customer.Shipping.Address.City,
+                            Country = customer.Shipping.Address.Country,
+                            Line1 = customer.Shipping.Address.Line1,
+                            Line2 = customer.Shipping.Address.Line2,
+                            PostalCode = customer.Shipping.Address.PostalCode,
+                            State = customer.Shipping.Address.State
+                        }
+                },
+            InvoiceSettings = customer.InvoiceSettings is null
+                ? null
+                : new CustomerInvoiceSettingsOptions
+                {
+                    CustomFields = customer.InvoiceSettings.CustomFields?.Select(cf => new CustomerInvoiceSettingsCustomFieldOptions
+                                           {
+                                               Name = cf.Name,
+                                               Value = cf.Value
+                                           })
+                                           .ToList(),
+                    DefaultPaymentMethod = customer.InvoiceSettings.DefaultPaymentMethodId,
+                    Footer = customer.InvoiceSettings.Footer,
+                    RenderingOptions = customer.InvoiceSettings.RenderingOptions is null
+                        ? null
+                        : new CustomerInvoiceSettingsRenderingOptionsOptions
+                        {
+                            AmountTaxDisplay = customer.InvoiceSettings.RenderingOptions.AmountTaxDisplay
+                        }
+                }
+        };
+
+        CustomerService service = await _service.Get(cancellationToken).NoSync();
+
+        Customer updated = await service.UpdateAsync(customer.Id, options, cancellationToken: cancellationToken).NoSync();
+
+        _logger.LogInformation(")) StripeCustomersUtil: Updated customer {id}", customer.Id);
+
+        return updated;
     }
 
     public async ValueTask<string?> GetDefaultPaymentMethodId(string id, CancellationToken cancellationToken = default)

@@ -50,6 +50,25 @@ public interface IStripeCustomersUtil : IAsyncDisposable, IDisposable
     ValueTask<Customer?> GetByUserId(string userId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Updates an existing Stripe customer with the fields provided in the given <see cref="Customer"/> object.
+    /// </summary>
+    /// <param name="customer">
+    /// The <see cref="Customer"/> object containing updated values. The <c>Id</c> property must be set.
+    /// Only fields that are mutable by Stripe will be updated.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A <see cref="CancellationToken"/> to observe while waiting for the task to complete.
+    /// </param>
+    /// <returns>
+    /// The updated <see cref="Customer"/> object returned by Stripe if the operation is successful; otherwise, <c>null</c>.
+    /// </returns>
+    /// <remarks>
+    /// This method maps editable fields from the provided <see cref="Customer"/> into <see cref="CustomerUpdateOptions"/> and sends an update request to Stripe.
+    /// Fields that cannot be updated via Stripe (e.g., <c>Created</c>, <c>Id</c>, <c>Deleted</c>) are ignored.
+    /// </remarks>
+    ValueTask<Customer?> Update(Customer customer, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Deletes all customers in the Stripe account. Use with caution.
     /// </summary>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
