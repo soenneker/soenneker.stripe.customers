@@ -15,8 +15,7 @@ public static class StripeCustomersUtilRegistrar
     /// </summary>
     public static IServiceCollection AddStripeCustomersUtilAsSingleton(this IServiceCollection services)
     {
-        services.AddStripeClientUtilAsSingleton()
-                .TryAddSingleton<IStripeCustomersUtil, StripeCustomersUtil>();
+        services.AddStripeClientUtilAsSingleton().TryAddSingleton<IStripeCustomersUtil, StripeCustomersUtil>();
 
         return services;
     }
@@ -26,8 +25,7 @@ public static class StripeCustomersUtilRegistrar
     /// </summary>
     public static IServiceCollection AddStripeCustomersUtilAsScoped(this IServiceCollection services)
     {
-        services.AddStripeClientUtilAsSingleton()
-                .TryAddScoped<IStripeCustomersUtil, StripeCustomersUtil>();
+        services.AddStripeClientUtilAsSingleton().TryAddScoped<IStripeCustomersUtil, StripeCustomersUtil>();
 
         return services;
     }

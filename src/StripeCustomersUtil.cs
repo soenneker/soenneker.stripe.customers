@@ -15,7 +15,7 @@ using Stripe;
 namespace Soenneker.Stripe.Customers;
 
 ///<inheritdoc cref="IStripeCustomersUtil"/>
-public class StripeCustomersUtil : IStripeCustomersUtil
+public sealed class StripeCustomersUtil : IStripeCustomersUtil
 {
     private readonly ILogger<StripeCustomersUtil> _logger;
 
@@ -251,15 +251,11 @@ public class StripeCustomersUtil : IStripeCustomersUtil
 
     public void Dispose()
     {
-        GC.SuppressFinalize(this);
-
         _service.Dispose();
     }
 
     public ValueTask DisposeAsync()
     {
-        GC.SuppressFinalize(this);
-
         return _service.DisposeAsync();
     }
 }
