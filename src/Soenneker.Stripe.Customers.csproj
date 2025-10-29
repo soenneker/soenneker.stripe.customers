@@ -35,7 +35,6 @@
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild></PropertyGroup>
     
     <ItemGroup>
-        
         <None Include="..\README.md" Pack="true" PackagePath="\" />
         <None Include="..\LICENSE" Pack="true" PackagePath="\" />
         <None Include="..\icon.png" Pack="true" PackagePath="\" />
@@ -43,6 +42,5 @@
 
     <ItemGroup>
         <PackageReference Include="Soenneker.Stripe.Client" Version="3.0.1110" />
-        <PackageReference Include="System.Linq.Async" Version="6.0.3" />
     </ItemGroup>
 </Project>
