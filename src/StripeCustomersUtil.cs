@@ -25,7 +25,7 @@ public sealed class StripeCustomersUtil : IStripeCustomersUtil
     {
         _logger = logger;
 
-        _service = new AsyncSingleton<CustomerService>(async (cancellationToken, _) =>
+        _service = new AsyncSingleton<CustomerService>(async cancellationToken =>
         {
             StripeClient client = await stripeUtil.Get(cancellationToken).NoSync();
 
