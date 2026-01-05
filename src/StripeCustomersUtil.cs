@@ -18,19 +18,24 @@ namespace Soenneker.Stripe.Customers;
 public sealed class StripeCustomersUtil : IStripeCustomersUtil
 {
     private readonly ILogger<StripeCustomersUtil> _logger;
+    private readonly IStripeClientUtil _stripeUtil;
 
     private readonly AsyncSingleton<CustomerService> _service;
 
     public StripeCustomersUtil(ILogger<StripeCustomersUtil> logger, IStripeClientUtil stripeUtil)
     {
         _logger = logger;
+        _stripeUtil = stripeUtil;
 
-        _service = new AsyncSingleton<CustomerService>(async cancellationToken =>
-        {
-            StripeClient client = await stripeUtil.Get(cancellationToken).NoSync();
+        _service = new AsyncSingleton<CustomerService>(CreateService);
+    }
 
-            return new CustomerService(client);
-        });
+    private async ValueTask<CustomerService> CreateService(CancellationToken cancellationToken)
+    {
+        StripeClient client = await _stripeUtil.Get(cancellationToken)
+                                               .NoSync();
+
+        return new CustomerService(client);
     }
 
     public async ValueTask<Customer?> Create(string email, string name, string userId, CancellationToken cancellationToken = default)
