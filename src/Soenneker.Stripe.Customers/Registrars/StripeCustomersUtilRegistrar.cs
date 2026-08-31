@@ -6,7 +6,7 @@ using Soenneker.Stripe.Customers.Abstract;
 namespace Soenneker.Stripe.Customers.Registrars;
 
 /// <summary>
-/// A .NET typesafe implementation of Stripe's Customers API
+/// Registers Stripe customer creation, lookup, update, deletion, and payment-method management.
 /// </summary>
 public static class StripeCustomersUtilRegistrar
 {

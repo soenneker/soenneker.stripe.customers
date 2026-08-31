@@ -14,7 +14,6 @@ using Stripe;
 
 namespace Soenneker.Stripe.Customers;
 
-///<inheritdoc cref="IStripeCustomersUtil"/>
 public sealed class StripeCustomersUtil : IStripeCustomersUtil
 {
     private readonly ILogger<StripeCustomersUtil> _logger;
@@ -134,6 +133,9 @@ public sealed class StripeCustomersUtil : IStripeCustomersUtil
     {
         Customer? customer = await GetByUserId(userId, cancellationToken).NoSync();
 
+        if (customer is null)
+            return;
+
         await Delete(customer.Id, customer.Email, cancellationToken).NoSync();
     }
 
@@ -247,25 +249,18 @@ public sealed class StripeCustomersUtil : IStripeCustomersUtil
         {
             InvoiceSettings = new CustomerInvoiceSettingsOptions
             {
-                DefaultPaymentMethod = null
+                DefaultPaymentMethod = string.Empty
             }
         };
 
         await service.UpdateAsync(id, updateOptions, cancellationToken: cancellationToken).NoSync();
     }
 
-    /// <summary>
-    /// Releases resources used by the current instance.
-    /// </summary>
     public void Dispose()
     {
         _service.Dispose();
     }
 
-    /// <summary>
-    /// Asynchronously releases resources used by the current instance.
-    /// </summary>
-    /// <returns>A task that represents the asynchronous operation.</returns>
     public ValueTask DisposeAsync()
     {
         return _service.DisposeAsync();

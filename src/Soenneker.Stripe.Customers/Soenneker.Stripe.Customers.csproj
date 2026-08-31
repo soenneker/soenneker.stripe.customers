@@ -7,7 +7,7 @@
     </PropertyGroup>
 
     <PropertyGroup>
-        <Description>A .NET typesafe implementation of Stripe's Customers API</Description>
+        <Description>Creates, retrieves, updates, and deletes Stripe customers and manages their default payment methods.</Description>
         <Version Condition="'$(BUILD_VERSION)' == ''">4.0.0</Version>
         <Version Condition="'$(BUILD_VERSION)' != ''">$(BUILD_VERSION)</Version>
         <AssemblyName>Soenneker.Stripe.Customers</AssemblyName>

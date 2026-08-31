@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.Contracts;
 using System.Threading;
 using System.Threading.Tasks;
 using Stripe;
@@ -20,7 +19,6 @@ public interface IStripeCustomersUtil : IAsyncDisposable, IDisposable
     /// <param name="userId">A unique identifier for the user in your system, stored in metadata.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The created <see cref="Customer"/> object, or null if creation failed.</returns>
-    [Pure]
     ValueTask<Customer?> Create(string email, string name, string userId, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -28,7 +26,6 @@ public interface IStripeCustomersUtil : IAsyncDisposable, IDisposable
     /// </summary>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A list of <see cref="Customer"/> objects, or null if none are found.</returns>
-    [Pure]
     ValueTask<List<Customer>?> GetAll(CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -37,7 +34,6 @@ public interface IStripeCustomersUtil : IAsyncDisposable, IDisposable
     /// <param name="id">The Stripe customer ID.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The <see cref="Customer"/> object if found, or null otherwise.</returns>
-    [Pure]
     ValueTask<Customer?> Get(string id, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -46,7 +42,6 @@ public interface IStripeCustomersUtil : IAsyncDisposable, IDisposable
     /// <param name="userId">The user ID stored in customer metadata.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The matched <see cref="Customer"/> if found, or null.</returns>
-    [Pure]
     ValueTask<Customer?> GetByUserId(string userId, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -95,7 +90,6 @@ public interface IStripeCustomersUtil : IAsyncDisposable, IDisposable
     /// <param name="id">The Stripe customer ID.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The default payment method ID if set, or null.</returns>
-    [Pure]
     ValueTask<string?> GetDefaultPaymentMethodId(string id, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -112,4 +106,10 @@ public interface IStripeCustomersUtil : IAsyncDisposable, IDisposable
     /// <param name="id">The Stripe customer ID.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     ValueTask DeleteDefaultPaymentMethod(string id, CancellationToken cancellationToken = default);
+
+    /// <summary>Releases the cached Stripe customer service owned by this utility.</summary>
+    new void Dispose();
+
+    /// <summary>Asynchronously releases the cached Stripe customer service owned by this utility.</summary>
+    new ValueTask DisposeAsync();
 }
