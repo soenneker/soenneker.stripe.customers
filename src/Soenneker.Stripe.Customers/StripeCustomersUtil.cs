@@ -14,6 +14,7 @@ using Stripe;
 
 namespace Soenneker.Stripe.Customers;
 
+/// <inheritdoc cref="IStripeCustomersUtil" />
 public sealed class StripeCustomersUtil : IStripeCustomersUtil
 {
     private readonly ILogger<StripeCustomersUtil> _logger;
