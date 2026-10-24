@@ -3,267 +3,96 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Soenneker.Extensions.Enumerable;
-using Soenneker.Extensions.Task;
-using Soenneker.Extensions.ValueTask;
+using Soenneker.Stripe.Client;
 using Soenneker.Stripe.Client.Abstract;
+using Soenneker.Stripe.OpenApiClient.Models;
 using Soenneker.Stripe.Customers.Abstract;
-using Soenneker.Utils.AsyncSingleton;
-using Stripe;
 
 namespace Soenneker.Stripe.Customers;
 
-/// <inheritdoc cref="IStripeCustomersUtil" />
-public sealed class StripeCustomersUtil : IStripeCustomersUtil
+public sealed class StripeCustomersUtil(IStripeClientUtil client) : IStripeCustomersUtil
 {
-    private readonly ILogger<StripeCustomersUtil> _logger;
-    private readonly IStripeClientUtil _stripeUtil;
-
-    private readonly AsyncSingleton<CustomerService> _service;
-
-    public StripeCustomersUtil(ILogger<StripeCustomersUtil> logger, IStripeClientUtil stripeUtil)
-    {
-        _logger = logger;
-        _stripeUtil = stripeUtil;
-
-        _service = new AsyncSingleton<CustomerService>(CreateService);
-    }
-
-    private async ValueTask<CustomerService> CreateService(CancellationToken cancellationToken)
-    {
-        StripeClient client = await _stripeUtil.Get(cancellationToken)
-                                               .NoSync();
-
-        return new CustomerService(client);
-    }
-
     public async ValueTask<Customer?> Create(string email, string name, string userId, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation(")) StripeCustomersUtil: Creating customer {email} ...", email);
-
-        var options = new CustomerCreateOptions
-        {
-            Email = email,
-            Name = name,
-            Metadata = new Dictionary<string, string>
-            {
-                {"userId", userId}
-            }
-        };
-
-        Customer? customer = await (await _service.Get(cancellationToken).NoSync()).CreateAsync(options, cancellationToken: cancellationToken).NoSync();
-
-        _logger.LogDebug(")) StripeCustomersUtil: Created customer {email}", email);
-
-        return customer;
+        var api = await client.Get(cancellationToken);
+        var options = new PostCustomersXWwwFormUrlencodedRequest { Email = email, Name = name };
+        options.Metadata = new() { PostCustomersXWwwFormUrlencodedRequestMetadataAnyOf1 = new() { AdditionalData = new Dictionary<string, object> { ["userId"] = userId } } };
+        return await api.V1.Customers.PostAsync(options, cancellationToken: cancellationToken);
     }
 
     public async ValueTask<List<Customer>?> GetAll(CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug(")) StripeCustomersUtil: Getting all Stripe customers...");
-
-        IAsyncEnumerable<Customer>? response = (await _service.Get(cancellationToken).NoSync()).ListAutoPagingAsync(cancellationToken: cancellationToken);
-
-        if (response == null)
-            return null;
-
-        List<Customer> result = await response.ToListAsync(cancellationToken).NoSync();
-
-        _logger.LogDebug(")) StripeCustomersUtil: Finished retrieving all Stripe customers");
-
+        var api = await client.Get(cancellationToken);
+        var result = new List<Customer>();
+        string? cursor = null;
+        do
+        {
+            var page = await api.V1.Customers.GetAsync(new(), c => { c.QueryParameters.Limit = 100; c.QueryParameters.StartingAfter = cursor; }, cancellationToken);
+            if (page?.Data is not { Count: > 0 }) break;
+            result.AddRange(page.Data);
+            cursor = page.HasMore == true ? page.Data[^1].Id : null;
+        } while (cursor != null);
         return result;
     }
 
     public async ValueTask<Customer?> Get(string id, CancellationToken cancellationToken = default)
     {
-        Customer? result = await (await _service.Get(cancellationToken).NoSync()).GetAsync(id, cancellationToken: cancellationToken).NoSync();
-
-        if (result == null)
-        {
-            _logger.LogWarning("Could not find Stripe customer from id ({customerId})", id);
-            return null;
-        }
-
-        return result;
+        var api = await client.Get(cancellationToken);
+        return (await api.V1.Customers[id].GetAsync(new(), cancellationToken: cancellationToken))?.Customer;
     }
 
     public async ValueTask<Customer?> GetByUserId(string userId, CancellationToken cancellationToken = default)
     {
-        var options = new CustomerSearchOptions
-        {
-            Query = $"metadata[\"userId\"]:\"{userId}\""
-        };
-
-        StripeSearchResult<Customer>? stripeResponse =
-            await (await _service.Get(cancellationToken).NoSync()).SearchAsync(options, cancellationToken: cancellationToken).NoSync();
-
-        if (stripeResponse.Data.IsNullOrEmpty())
-            return null;
-
-        return stripeResponse.Data.FirstOrDefault();
-    }
-
-    public async ValueTask DeleteAll(CancellationToken cancellationToken = default)
-    {
-        _logger.LogWarning(")) StripeCustomersUtil: Deleting all customers...");
-
-        List<Customer>? customers = await GetAll(cancellationToken).NoSync();
-
-        if (customers == null)
-            return;
-
-        foreach (Customer customer in customers)
-        {
-            await Delete(customer.Id, customer.Email, cancellationToken).NoSync();
-        }
-
-        _logger.LogWarning(")) StripeCustomersUtil: Finished deleting all customers");
+        var api = await client.Get(cancellationToken);
+        var page = await api.V1.Customers.Search.GetAsync(new(), c => c.QueryParameters.Query = $"metadata[\"userId\"]:\"{userId}\"", cancellationToken);
+        return page?.Data?.FirstOrDefault();
     }
 
     public async ValueTask Delete(string id, string email, CancellationToken cancellationToken = default)
     {
-        _logger.LogWarning(")) StripeCustomersUtil: Deleting customer ({email}) ...", email);
+        var api = await client.Get(cancellationToken);
+        await api.V1.Customers[id].DeleteAsync(new(), cancellationToken: cancellationToken);
+    }
 
-        CustomerService service = await _service.Get(cancellationToken).NoSync();
-
-        await service.DeleteAsync(id, cancellationToken: cancellationToken).NoSync();
+    public async ValueTask DeleteAll(CancellationToken cancellationToken = default)
+    {
+        foreach (var customer in await GetAll(cancellationToken) ?? [])
+            await Delete(customer.Id!, customer.Email ?? "", cancellationToken);
     }
 
     public async ValueTask DeleteByUserId(string userId, CancellationToken cancellationToken = default)
     {
-        Customer? customer = await GetByUserId(userId, cancellationToken).NoSync();
-
-        if (customer is null)
-            return;
-
-        await Delete(customer.Id, customer.Email, cancellationToken).NoSync();
+        var customer = await GetByUserId(userId, cancellationToken);
+        if (customer?.Id is not null) await Delete(customer.Id, customer.Email ?? "", cancellationToken);
     }
 
     public async ValueTask<Customer?> Update(Customer customer, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation(")) StripeCustomersUtil: Updating customer {id} ...", customer.Id);
-
-        var options = new CustomerUpdateOptions
+        var options = StripeModelUtil.SelectFields(customer, PostCustomersCustomerXWwwFormUrlencodedRequest.CreateFromDiscriminatorValue,
+            "email", "name", "description", "metadata", "phone", "invoice_prefix", "preferred_locales", "tax_exempt", "address", "shipping");
+        if (customer.InvoiceSettings != null)
         {
-            Email = customer.Email,
-            Name = customer.Name,
-            Description = customer.Description,
-            Metadata = customer.Metadata,
-            Phone = customer.Phone,
-            InvoicePrefix = customer.InvoicePrefix,
-            PreferredLocales = customer.PreferredLocales?.ToList(),
-            TaxExempt = customer.TaxExempt,
-            Tax = customer.Tax is null
-                ? null
-                : new CustomerTaxOptions
-                {
-                    IpAddress = customer.Tax.IpAddress
-                },
-            Address = customer.Address is null
-                ? null
-                : new AddressOptions
-                {
-                    City = customer.Address.City,
-                    Country = customer.Address.Country,
-                    Line1 = customer.Address.Line1,
-                    Line2 = customer.Address.Line2,
-                    PostalCode = customer.Address.PostalCode,
-                    State = customer.Address.State
-                },
-            Shipping = customer.Shipping is null
-                ? null
-                : new ShippingOptions
-                {
-                    Name = customer.Shipping.Name,
-                    Phone = customer.Shipping.Phone,
-                    Address = customer.Shipping.Address is null
-                        ? null
-                        : new AddressOptions
-                        {
-                            City = customer.Shipping.Address.City,
-                            Country = customer.Shipping.Address.Country,
-                            Line1 = customer.Shipping.Address.Line1,
-                            Line2 = customer.Shipping.Address.Line2,
-                            PostalCode = customer.Shipping.Address.PostalCode,
-                            State = customer.Shipping.Address.State
-                        }
-                },
-            InvoiceSettings = customer.InvoiceSettings is null
-                ? null
-                : new CustomerInvoiceSettingsOptions
-                {
-                    CustomFields = customer.InvoiceSettings.CustomFields?.Select(cf => new CustomerInvoiceSettingsCustomFieldOptions
-                                           {
-                                               Name = cf.Name,
-                                               Value = cf.Value
-                                           })
-                                           .ToList(),
-                    DefaultPaymentMethod = customer.InvoiceSettings.DefaultPaymentMethodId,
-                    Footer = customer.InvoiceSettings.Footer,
-                    RenderingOptions = customer.InvoiceSettings.RenderingOptions is null
-                        ? null
-                        : new CustomerInvoiceSettingsRenderingOptionsOptions
-                        {
-                            AmountTaxDisplay = customer.InvoiceSettings.RenderingOptions.AmountTaxDisplay
-                        }
-                }
-        };
-
-        CustomerService service = await _service.Get(cancellationToken).NoSync();
-
-        Customer updated = await service.UpdateAsync(customer.Id, options, cancellationToken: cancellationToken).NoSync();
-
-        _logger.LogInformation(")) StripeCustomersUtil: Updated customer {id}", customer.Id);
-
-        return updated;
+            options.InvoiceSettings = StripeModelUtil.SelectFields(customer.InvoiceSettings,
+                PostCustomersCustomerXWwwFormUrlencodedRequestInvoiceSettings.CreateFromDiscriminatorValue,
+                "custom_fields", "footer", "rendering_options");
+            options.InvoiceSettings.DefaultPaymentMethod = customer.InvoiceSettings.DefaultPaymentMethod.GetId();
+        }
+        var api = await client.Get(cancellationToken);
+        return await api.V1.Customers[customer.Id!].PostAsync(options, cancellationToken: cancellationToken);
     }
 
-    public async ValueTask<string?> GetDefaultPaymentMethodId(string id, CancellationToken cancellationToken = default)
-    {
-        CustomerService service = await _service.Get(cancellationToken).NoSync();
-        Customer customer = await service.GetAsync(id, cancellationToken: cancellationToken).NoSync();
-
-        return customer?.InvoiceSettings?.DefaultPaymentMethodId;
-    }
+    public async ValueTask<string?> GetDefaultPaymentMethodId(string id, CancellationToken cancellationToken = default) =>
+        (await Get(id, cancellationToken))?.InvoiceSettings?.DefaultPaymentMethod.GetId();
 
     public async ValueTask UpdateDefaultPaymentMethod(string id, string paymentMethodId, CancellationToken cancellationToken = default)
     {
-        CustomerService service = await _service.Get(cancellationToken).NoSync();
-
-        var updateOptions = new CustomerUpdateOptions
-        {
-            InvoiceSettings = new CustomerInvoiceSettingsOptions
-            {
-                DefaultPaymentMethod = paymentMethodId
-            }
-        };
-
-        await service.UpdateAsync(id, updateOptions, cancellationToken: cancellationToken).NoSync();
+        var api = await client.Get(cancellationToken);
+        var options = new PostCustomersCustomerXWwwFormUrlencodedRequest { InvoiceSettings = new() };
+        options.InvoiceSettings.DefaultPaymentMethod = paymentMethodId;
+        await api.V1.Customers[id].PostAsync(options, cancellationToken: cancellationToken);
     }
 
-    public async ValueTask DeleteDefaultPaymentMethod(string id, CancellationToken cancellationToken = default)
-    {
-        CustomerService service = await _service.Get(cancellationToken).NoSync();
-
-        var updateOptions = new CustomerUpdateOptions
-        {
-            InvoiceSettings = new CustomerInvoiceSettingsOptions
-            {
-                DefaultPaymentMethod = string.Empty
-            }
-        };
-
-        await service.UpdateAsync(id, updateOptions, cancellationToken: cancellationToken).NoSync();
-    }
-
-    public void Dispose()
-    {
-        _service.Dispose();
-    }
-
-    public ValueTask DisposeAsync()
-    {
-        return _service.DisposeAsync();
-    }
+    public ValueTask DeleteDefaultPaymentMethod(string id, CancellationToken cancellationToken = default) => UpdateDefaultPaymentMethod(id, "", cancellationToken);
+    public void Dispose() { }
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }

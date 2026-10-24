@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Stripe;
+using Soenneker.Stripe.OpenApiClient.Models;
 
 namespace Soenneker.Stripe.Customers.Abstract;
 
@@ -58,7 +58,7 @@ public interface IStripeCustomersUtil : IAsyncDisposable, IDisposable
     /// The updated <see cref="Customer"/> object returned by Stripe if the operation is successful; otherwise, <c>null</c>.
     /// </returns>
     /// <remarks>
-    /// This method maps editable fields from the provided <see cref="Customer"/> into <see cref="CustomerUpdateOptions"/> and sends an update request to Stripe.
+    /// This method maps editable fields from the provided <see cref="Customer"/> into <see cref="PostCustomersCustomerXWwwFormUrlencodedRequest"/> and sends an update request to Stripe.
     /// Fields that cannot be updated via Stripe (e.g., <c>Created</c>, <c>Id</c>, <c>Deleted</c>) are ignored.
     /// </remarks>
     ValueTask<Customer?> Update(Customer customer, CancellationToken cancellationToken = default);
