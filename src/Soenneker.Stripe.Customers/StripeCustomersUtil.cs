@@ -70,6 +70,9 @@ public sealed class StripeCustomersUtil(IStripeClientUtil client) : IStripeCusto
     {
         var options = StripeModelUtil.SelectFields(customer, PostCustomersCustomerXWwwFormUrlencodedRequest.CreateFromDiscriminatorValue,
             "email", "name", "description", "metadata", "phone", "invoice_prefix", "preferred_locales", "tax_exempt", "address", "shipping");
+        if (customer.Tax != null)
+            options.Tax = StripeModelUtil.SelectFields(customer.Tax,
+                PostCustomersCustomerXWwwFormUrlencodedRequestTax.CreateFromDiscriminatorValue, "ip_address");
         if (customer.InvoiceSettings != null)
         {
             options.InvoiceSettings = StripeModelUtil.SelectFields(customer.InvoiceSettings,
